@@ -126,7 +126,7 @@
 
         /* Jitsi Iframe Hider */
         #jitsi-container iframe {
-            display: none; /* We hide the visual component completely */
+            display: none !important; 
         }
     </style>
 </head>
@@ -136,7 +136,6 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- Custom Dropdown Component ---
         const CustomSelect = ({ options, value, onChange, placeholder, icon }) => {
             const [isOpen, setIsOpen] = useState(false);
             const containerRef = useRef(null);
@@ -189,7 +188,6 @@
             );
         };
 
-        // --- Modal Component ---
         const Modal = ({ children, title, icon }) => (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-6 animate-fade-in">
                 <div className="absolute inset-0 bg-black/80 backdrop-blur-md"></div>
@@ -205,41 +203,34 @@
             </div>
         );
 
-        // --- Main App Component ---
         const App = () => {
-            const [step, setStep] = useState('landing'); // landing, permissions, call
+            const [step, setStep] = useState('landing');
             const [roomName, setRoomName] = useState('');
             const [userName, setUserName] = useState('');
             
-            // Audio State
             const [micList, setMicList] = useState([]);
             const [selectedMic, setSelectedMic] = useState('');
             const [permissionGranted, setPermissionGranted] = useState(false);
             
-            // Call State
             const [jitsiApi, setJitsiApi] = useState(null);
             const [isMuted, setIsMuted] = useState(false);
-            const [isAudioOnlyMode, setIsAudioOnlyMode] = useState(true);
-            const [participants, setParticipants] = useState(1); // Self
-            const [volumeLevel, setVolumeLevel] = useState(0); // For visualizer
+            const [participants, setParticipants] = useState(1);
+            const [volumeLevel, setVolumeLevel] = useState(0);
 
-            // Initialize Room ID from URL or Random
             useEffect(() => {
                 const params = new URLSearchParams(window.location.search);
                 const roomParam = params.get('room');
                 if (roomParam) {
-                    setRoomName(roomParam);
+                    setRoomName(roomParam.toUpperCase());
                 } else {
                     const randomId = Math.random().toString(36).substring(2, 8).toUpperCase();
                     setRoomName(randomId);
                 }
 
-                // Load saved username
                 const savedName = localStorage.getItem('uplink_username');
                 if (savedName) setUserName(savedName);
             }, []);
 
-            // Visualizer Effect (Fake Data for visual appeal since we can't easily analyze stream in Jitsi iframe)
             useEffect(() => {
                 if (step === 'call' && !isMuted) {
                     const interval = setInterval(() => {
@@ -256,11 +247,9 @@
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     setPermissionGranted(true);
                     
-                    // Enumerate devices
                     const devices = await navigator.mediaDevices.enumerateDevices();
                     const audioInputs = devices.filter(device => device.kind === 'audioinput');
                     
-                    // Format for dropdown
                     const formattedMics = audioInputs.map(d => ({
                         deviceId: d.deviceId,
                         label: d.label || `Microphone ${d.deviceId.slice(0, 5)}...`
@@ -269,7 +258,6 @@
                     setMicList(formattedMics);
                     if (formattedMics.length > 0) setSelectedMic(formattedMics[0].deviceId);
                     
-                    // Stop the stream immediately, we just needed permissions/labels
                     stream.getTracks().forEach(track => track.stop());
                     
                 } catch (error) {
@@ -287,23 +275,26 @@
                 setStep('call');
             };
 
-            // Initialize Jitsi when entering 'call' step
             useEffect(() => {
                 if (step === 'call' && !jitsiApi) {
+                    // Force room name to uppercase for consistency across users
+                    const cleanRoom = roomName.trim().toUpperCase() || "LOBBY";
                     const domain = 'meet.jit.si';
                     const options = {
-                        roomName: `UplinkSecure_${roomName}`,
-                        width: '1px', // Hidden visually, but active
-                        height: '1px',
+                        roomName: `UplinkSecure_${cleanRoom}`,
+                        width: '100%',
+                        height: '100%',
                         parentNode: document.getElementById('jitsi-container'),
                         configOverwrite: {
                             startWithVideoMuted: true,
                             startWithAudioMuted: false,
                             disableDeepLinking: true,
                             prejoinPageEnabled: false,
+                            p2p: { enabled: true },
+                            audioOnly: true,
                         },
                         interfaceConfigOverwrite: {
-                            TOOLBAR_BUTTONS: [], // Hide native UI
+                            TOOLBAR_BUTTONS: [],
                             FILM_STRIP_MAX_HEIGHT: 0,
                             SHOW_JITSI_WATERMARK: false,
                             SHOW_WATERMARK_FOR_GUESTS: false,
@@ -315,23 +306,24 @@
 
                     const api = new window.JitsiMeetExternalAPI(domain, options);
                     
-                    // Event Listeners
                     api.addEventListeners({
                         videoConferenceJoined: () => {
                             if (selectedMic) {
                                 api.setAudioInputDevice(selectedMic);
                             }
+                            // Initial participant count
+                            setParticipants(api.getNumberOfParticipants());
                         },
                         audioMuteStatusChanged: (e) => {
                             setIsMuted(e.muted);
                         },
-                        participantJoined: () => setParticipants(p => p + 1),
-                        participantLeft: () => setParticipants(p => Math.max(1, p - 1)),
+                        participantJoined: () => setParticipants(api.getNumberOfParticipants()),
+                        participantLeft: () => setParticipants(api.getNumberOfParticipants()),
                     });
 
                     setJitsiApi(api);
                 }
-            }, [step, roomName, userName, selectedMic]);
+            }, [step]);
 
             const toggleMute = () => {
                 if (jitsiApi) {
@@ -350,26 +342,20 @@
             const shareLink = () => {
                 const url = `${window.location.origin}${window.location.pathname}?room=${roomName}`;
                 navigator.clipboard.writeText(url).then(() => {
-                    // Small visual feedback could go here
                     alert("Secure link copied to clipboard.");
                 });
             };
 
-            // --- Render Logic ---
-
             return (
                 <div className="w-full h-full relative z-10 font-sans">
-                    {/* Background Elements */}
                     <div className="absolute inset-0 pointer-events-none">
                         <div className="blob bg-brand-600/20 top-[-20%] left-[-20%] w-[80%] h-[80%]"></div>
                         <div className="blob bg-cyan-600/20 bottom-[-20%] right-[-20%] w-[80%] h-[80%] animation-delay-2000"></div>
                         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.03]"></div>
                     </div>
 
-                    {/* Hidden Jitsi Container */}
-                    <div id="jitsi-container" className="absolute top-0 left-0 w-px h-px opacity-0 pointer-events-none"></div>
+                    <div id="jitsi-container" key={roomName} className="absolute top-0 left-0 w-px h-px opacity-0 pointer-events-none"></div>
 
-                    {/* VIEW: Landing */}
                     {step === 'landing' && (
                         <div className="flex flex-col h-full p-6 animate-fade-in">
                             <div className="flex-1 flex flex-col items-center justify-center max-w-sm mx-auto w-full">
@@ -383,7 +369,6 @@
                                 <p className="text-white/40 font-medium tracking-widest text-xs uppercase mb-12">Secure Voice Channel</p>
 
                                 <div className="w-full glass-panel rounded-[2rem] p-6 space-y-4">
-                                    {/* Inputs */}
                                     <div className="bg-slate-950/50 rounded-xl border border-white/5 flex items-center px-4 transition-colors focus-within:border-brand-500/50">
                                         <i className="fa-solid fa-hashtag text-white/30 text-sm"></i>
                                         <input 
@@ -421,7 +406,6 @@
                         </div>
                     )}
 
-                    {/* VIEW: Permissions */}
                     {step === 'permissions' && (
                         <Modal title="Hardware Check" icon="microchip">
                             <p className="text-white/60 text-sm mb-8 leading-relaxed">
@@ -465,10 +449,8 @@
                         </Modal>
                     )}
 
-                    {/* VIEW: Active Call */}
                     {step === 'call' && (
                         <div className="flex flex-col h-full p-6 animate-slide-up relative">
-                            {/* Header info */}
                             <div className="glass-panel-lighter rounded-full px-6 py-3 mx-auto flex items-center gap-4">
                                 <div className="flex items-center gap-2">
                                     <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
@@ -483,17 +465,13 @@
                                 </div>
                             </div>
 
-                            {/* Main Visualizer Area */}
                             <div className="flex-1 flex flex-col items-center justify-center relative">
-                                {/* Rings */}
                                 <div className={`absolute w-64 h-64 rounded-full border border-brand-500/20 transition-all duration-100 ease-out ${isMuted ? 'scale-90 opacity-20' : 'scale-100 opacity-100'}`} style={{ transform: `scale(${1 + volumeLevel/300})` }}></div>
                                 <div className={`absolute w-48 h-48 rounded-full border border-brand-500/40 transition-all duration-100 ease-out ${isMuted ? 'scale-90 opacity-20' : 'scale-100 opacity-100'}`} style={{ transform: `scale(${1 + volumeLevel/200})` }}></div>
                                 
-                                {/* Central Orb */}
                                 <div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all duration-500 ${isMuted ? 'bg-slate-800 shadow-none' : 'bg-gradient-to-br from-brand-400 to-brand-600 shadow-[0_0_60px_rgba(56,189,248,0.4)]'}`}>
                                     <i className={`fa-solid ${isMuted ? 'fa-microphone-slash text-white/20' : 'fa-microphone text-white'} text-3xl transition-all duration-300`}></i>
                                     
-                                    {/* Ripple Effect when talking */}
                                     {!isMuted && (
                                         <div className="absolute inset-0 rounded-full border border-brand-200 opacity-0 animate-ripple"></div>
                                     )}
@@ -507,7 +485,6 @@
                                 </div>
                             </div>
 
-                            {/* Controls */}
                             <div className="w-full max-w-sm mx-auto glass-panel rounded-[2.5rem] p-4 flex items-center justify-between gap-4">
                                 <button 
                                     onClick={shareLink}
@@ -526,7 +503,7 @@
 
                                 <button 
                                     onClick={leaveCall}
-                                    className="w-20 h-20 rounded-full bg-red-500/20 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/30 flex items-center justify-center transition-all active:scale-90 shadow-[0_0_30px_rgba(239,68,68,0.1)]"
+                                    className="w-20 h-20 rounded-full bg-red-500/20 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/30 flex items-center justify-center transition-all active:scale-90 shadow-[0_0_30_rgba(239,68,68,0.1)]"
                                 >
                                     <i className="fa-solid fa-phone-slash text-xl"></i>
                                 </button>
