@@ -2,528 +2,561 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Voice Uplink • Secure Channel</title>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Voice Link | Secure Audio Stream</title>
+    
+    <!-- External Jitsi API -->
+    <script src='https://meet.jit.si/external_api.js'></script>
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
-
-    <!-- Jitsi Meet API -->
-    <script src='https://meet.jit.si/external_api.js'></script>
-
-    <!-- React & ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-
-    <!-- Babel -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                        display: ['Outfit', 'sans-serif'],
-                    },
-                    colors: {
-                        slate: {
-                            850: '#151e2e',
-                            950: '#020617', // The specific deep midnight blue
-                        },
-                        brand: {
-                            400: '#38bdf8', // Sky blue for voice theme
-                            500: '#0ea5e9',
-                            600: '#0284c7',
-                        }
-                    },
-                    animation: {
-                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                        'float': 'float 6s ease-in-out infinite',
-                        'slide-up': 'slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-                        'fade-in': 'fadeIn 0.5s ease-out forwards',
-                        'ripple': 'ripple 1.5s cubic-bezier(0, 0.2, 0.8, 1) infinite',
-                    },
-                    keyframes: {
-                        float: {
-                            '0%, 100%': { transform: 'translateY(0)' },
-                            '50%': { transform: 'translateY(-10px)' },
-                        },
-                        slideUp: {
-                            'from': { transform: 'translateY(20px)', opacity: '0' },
-                            'to': { transform: 'translateY(0)', opacity: '1' },
-                        },
-                        fadeIn: {
-                            'from': { opacity: '0' },
-                            'to': { opacity: '1' },
-                        },
-                        ripple: {
-                            '0%': { transform: 'scale(1)', opacity: '0.5' },
-                            '100%': { transform: 'scale(2)', opacity: '0' },
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    
+    <!-- Icons (Lucide) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        /* Core Locking Styles */
+        /* --- CORE LOCKDOWN --- */
         html, body {
             position: fixed;
             inset: 0;
             overflow: hidden;
-            background-color: #020617;
-            color: #f8fafc;
-            -webkit-tap-highlight-color: transparent;
             touch-action: none;
             user-select: none;
             -webkit-user-select: none;
-            font-family: 'Inter', sans-serif;
+            background-color: #020617; /* Slate 950/Midnight */
+            color: #f8fafc;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
-        /* Glassmorphism Classes */
-        .glass-panel {
-            background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
-        }
-
-        .glass-panel-lighter {
-            background: rgba(30, 41, 59, 0.4);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        /* Ambient Blobs */
-        .blob {
+        /* --- ANIMATED BACKGROUNDS --- */
+        .ambient-blob {
             position: absolute;
             border-radius: 50%;
             filter: blur(80px);
             opacity: 0.4;
+            animation: float 20s infinite ease-in-out;
             z-index: 0;
-            animation: blob-bounce 10s infinite ease-in-out;
         }
 
-        @keyframes blob-bounce {
+        .blob-1 { top: -10%; left: -10%; width: 500px; height: 500px; background: #4f46e5; animation-delay: 0s; }
+        .blob-2 { bottom: -10%; right: -10%; width: 600px; height: 600px; background: #7c3aed; animation-delay: -5s; }
+        .blob-3 { top: 40%; left: 30%; width: 300px; height: 300px; background: #0ea5e9; animation-delay: -10s; }
+
+        @keyframes float {
             0%, 100% { transform: translate(0, 0) scale(1); }
             33% { transform: translate(30px, -50px) scale(1.1); }
             66% { transform: translate(-20px, 20px) scale(0.9); }
         }
 
-        /* Utility Hide Scrollbar */
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* Scanline Overlay */
+        .scanlines {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.3;
+        }
 
-        /* Jitsi Iframe Hider */
-        #jitsi-container iframe {
-            display: none !important; 
+        /* --- GLASSMORPHISM --- */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border-radius: 24px;
+        }
+
+        .glass-button {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .glass-button:active {
+            transform: scale(0.96);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Custom Input/Select Styling */
+        .custom-select {
+            appearance: none;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 12px;
+            width: 100%;
+            font-size: 0.95rem;
+            outline: none;
+        }
+        
+        .custom-select:focus {
+            border-color: #6366f1;
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        /* --- VISUALIZER --- */
+        .voice-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(99,102,241,0.2) 0%, rgba(99,102,241,0) 70%);
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .voice-ring.active {
+            opacity: 1;
+            animation: pulse-ring 2s infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { width: 100px; height: 100px; opacity: 0.5; }
+            100% { width: 300px; height: 300px; opacity: 0; }
+        }
+
+        /* Hide Jitsi Iframe but keep it functional */
+        #meet-container {
+            position: absolute;
+            top: -9999px;
+            left: -9999px;
+            visibility: hidden; 
+            /* Note: We use off-screen positioning rather than display:none to ensure scripts run */
+        }
+        
+        .hidden-ui {
+            display: none !important;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Shine Effect */
+        .shine-wrapper {
+            position: relative;
+            overflow: hidden;
+        }
+        .shine-wrapper::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent);
+            transform: skewX(-25deg);
+            animation: shine 6s infinite;
+        }
+        @keyframes shine {
+            0% { left: -100%; }
+            20% { left: 200%; }
+            100% { left: 200%; }
         }
     </style>
 </head>
 <body>
-    <div id="root"></div>
 
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+    <!-- Background Elements -->
+    <div class="ambient-blob blob-1"></div>
+    <div class="ambient-blob blob-2"></div>
+    <div class="ambient-blob blob-3"></div>
+    <div class="scanlines"></div>
 
-        const CustomSelect = ({ options, value, onChange, placeholder, icon }) => {
-            const [isOpen, setIsOpen] = useState(false);
-            const containerRef = useRef(null);
+    <!-- Main App Container -->
+    <div id="app" class="relative z-10 w-full h-full flex flex-col items-center justify-center p-6">
+        
+        <!-- Header / Status -->
+        <div class="absolute top-0 left-0 right-0 p-6 flex justify-between items-center z-50">
+            <div class="flex items-center gap-2 text-slate-400">
+                <i data-lucide="radio" class="w-4 h-4"></i>
+                <span class="text-xs font-medium tracking-widest uppercase">Voice Link Encrypted</span>
+            </div>
+            <div id="connection-status" class="flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full bg-slate-600"></div>
+                <span class="text-xs text-slate-500 font-medium">Idle</span>
+            </div>
+        </div>
 
-            useEffect(() => {
-                const handleClickOutside = (event) => {
-                    if (containerRef.current && !containerRef.current.contains(event.target)) {
-                        setIsOpen(false);
-                    }
-                };
-                document.addEventListener('mousedown', handleClickOutside);
-                return () => document.removeEventListener('mousedown', handleClickOutside);
-            }, []);
-
-            const selectedLabel = options.find(opt => opt.deviceId === value)?.label || placeholder;
-
-            return (
-                <div className="relative w-full" ref={containerRef}>
-                    <button 
-                        onClick={() => setIsOpen(!isOpen)}
-                        className="w-full glass-panel-lighter rounded-xl p-4 flex items-center justify-between text-left transition-all active:scale-[0.98] group"
-                    >
-                        <div className="flex items-center gap-3 overflow-hidden">
-                            <i className={`fa-solid ${icon} text-brand-400 opacity-70 group-hover:opacity-100 transition-opacity`}></i>
-                            <span className="truncate text-sm font-semibold text-white/90">{selectedLabel}</span>
-                        </div>
-                        <i className={`fa-solid fa-chevron-down text-xs text-white/30 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}></i>
-                    </button>
-
-                    {isOpen && (
-                        <div className="absolute top-full left-0 right-0 mt-2 glass-panel rounded-xl overflow-hidden z-50 animate-fade-in max-h-48 overflow-y-auto no-scrollbar">
-                            {options.length > 0 ? options.map((opt) => (
-                                <button
-                                    key={opt.deviceId}
-                                    onClick={() => {
-                                        onChange(opt.deviceId);
-                                        setIsOpen(false);
-                                    }}
-                                    className={`w-full text-left p-4 text-sm font-medium border-b border-white/5 last:border-0 hover:bg-white/10 transition-colors flex items-center gap-2 ${value === opt.deviceId ? 'text-brand-400 bg-brand-400/10' : 'text-white/70'}`}
-                                >
-                                    {value === opt.deviceId && <i className="fa-solid fa-check text-xs"></i>}
-                                    <span className="truncate">{opt.label}</span>
-                                </button>
-                            )) : (
-                                <div className="p-4 text-center text-xs text-white/40">No devices found</div>
-                            )}
-                        </div>
-                    )}
+        <!-- VIEW 1: PRE-FLIGHT (Permissions & Device Selection) -->
+        <div id="preflight-screen" class="glass-panel w-full max-w-sm p-8 flex flex-col gap-6 fade-in shine-wrapper">
+            <div class="text-center space-y-2">
+                <div class="w-16 h-16 bg-white/5 rounded-2xl mx-auto flex items-center justify-center mb-4 border border-white/10">
+                    <i data-lucide="mic" class="w-8 h-8 text-indigo-400"></i>
                 </div>
-            );
-        };
+                <h1 class="text-2xl font-bold tracking-tight">Audio Setup</h1>
+                <p class="text-sm text-slate-400">Configure your hardware to join the secure channel.</p>
+            </div>
 
-        const Modal = ({ children, title, icon }) => (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-6 animate-fade-in">
-                <div className="absolute inset-0 bg-black/80 backdrop-blur-md"></div>
-                <div className="relative w-full max-w-sm glass-panel rounded-[2rem] p-8 animate-slide-up flex flex-col items-center text-center shadow-2xl shadow-brand-900/20">
-                    {icon && (
-                        <div className="w-16 h-16 rounded-full bg-brand-500/10 flex items-center justify-center mb-6 ring-1 ring-brand-500/30">
-                            <i className={`fa-solid ${icon} text-2xl text-brand-400`}></i>
-                        </div>
-                    )}
-                    {title && <h2 className="text-2xl font-display font-bold text-white mb-2">{title}</h2>}
-                    {children}
+            <div class="space-y-4">
+                <div class="space-y-1">
+                    <label class="text-xs text-slate-500 ml-1 uppercase font-bold tracking-wider">Microphone</label>
+                    <div class="relative">
+                        <select id="mic-select" class="custom-select">
+                            <option value="">Default Microphone</option>
+                        </select>
+                        <i data-lucide="chevron-down" class="absolute right-4 top-3.5 w-4 h-4 text-slate-500 pointer-events-none"></i>
+                    </div>
+                </div>
+                
+                <div class="space-y-1">
+                    <label class="text-xs text-slate-500 ml-1 uppercase font-bold tracking-wider">Speaker</label>
+                    <div class="relative">
+                        <select id="speaker-select" class="custom-select">
+                            <option value="">Default Speaker</option>
+                        </select>
+                        <i data-lucide="chevron-down" class="absolute right-4 top-3.5 w-4 h-4 text-slate-500 pointer-events-none"></i>
+                    </div>
                 </div>
             </div>
-        );
 
-        const App = () => {
-            const [step, setStep] = useState('landing');
-            const [roomName, setRoomName] = useState('');
-            const [userName, setUserName] = useState('');
+            <button id="join-btn" class="mt-4 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-4 rounded-xl transition-all shadow-lg shadow-indigo-900/40 active:scale-95 flex items-center justify-center gap-2 group">
+                <span>Enter Channel</span>
+                <i data-lucide="arrow-right" class="w-4 h-4 transition-transform group-hover:translate-x-1"></i>
+            </button>
             
-            const [micList, setMicList] = useState([]);
-            const [selectedMic, setSelectedMic] = useState('');
-            const [permissionGranted, setPermissionGranted] = useState(false);
+            <p class="text-[10px] text-center text-slate-600">
+                By joining, you consent to microphone access for this session.
+            </p>
+        </div>
+
+        <!-- VIEW 2: ACTIVE CALL UI (Hidden by default) -->
+        <div id="call-screen" class="hidden-ui w-full max-w-md flex-col items-center justify-between h-[60vh] relative">
             
-            const [jitsiApi, setJitsiApi] = useState(null);
-            const [isMuted, setIsMuted] = useState(false);
-            const [participants, setParticipants] = useState(1);
-            const [volumeLevel, setVolumeLevel] = useState(0);
-
-            useEffect(() => {
-                const params = new URLSearchParams(window.location.search);
-                const roomParam = params.get('room');
-                if (roomParam) {
-                    // Sanitize and normalize room name from URL
-                    const sanitized = roomParam.trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-                    setRoomName(sanitized);
-                } else {
-                    const randomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-                    setRoomName(randomId);
-                }
-
-                const savedName = localStorage.getItem('uplink_username');
-                if (savedName) setUserName(savedName);
-            }, []);
-
-            useEffect(() => {
-                if (step === 'call' && !isMuted) {
-                    const interval = setInterval(() => {
-                        setVolumeLevel(Math.random() * 100);
-                    }, 100);
-                    return () => clearInterval(interval);
-                } else {
-                    setVolumeLevel(0);
-                }
-            }, [step, isMuted]);
-
-            const getPermissions = async () => {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    setPermissionGranted(true);
-                    
-                    const devices = await navigator.mediaDevices.enumerateDevices();
-                    const audioInputs = devices.filter(device => device.kind === 'audioinput');
-                    
-                    const formattedMics = audioInputs.map(d => ({
-                        deviceId: d.deviceId,
-                        label: d.label || `Microphone ${d.deviceId.slice(0, 5)}...`
-                    }));
-                    
-                    setMicList(formattedMics);
-                    if (formattedMics.length > 0) setSelectedMic(formattedMics[0].deviceId);
-                    
-                    stream.getTracks().forEach(track => track.stop());
-                    
-                } catch (error) {
-                    console.error("Permission denied", error);
-                    alert("Microphone access is required to use the uplink.");
-                }
-            };
-
-            const startCall = () => {
-                if (!userName.trim()) {
-                    alert("Codename required.");
-                    return;
-                }
-                localStorage.setItem('uplink_username', userName);
-                setStep('call');
-            };
-
-            useEffect(() => {
-                if (step === 'call' && !jitsiApi) {
-                    // CRITICAL FIX: Sanitize input and force lowercase for Jitsi backend naming consistency
-                    // This ensures "Room1" and "room1" land in the same Jitsi channel
-                    const sanitizedRoom = roomName.trim().replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || "lobby";
-                    
-                    const domain = 'meet.jit.si';
-                    const options = {
-                        roomName: `UplinkSecure_${sanitizedRoom}`,
-                        width: '100%',
-                        height: '100%',
-                        parentNode: document.getElementById('jitsi-container'),
-                        configOverwrite: {
-                            startWithVideoMuted: true,
-                            startWithAudioMuted: false,
-                            disableDeepLinking: true,
-                            prejoinPageEnabled: false,
-                            p2p: { enabled: true },
-                            audioOnly: true,
-                        },
-                        interfaceConfigOverwrite: {
-                            TOOLBAR_BUTTONS: [],
-                            FILM_STRIP_MAX_HEIGHT: 0,
-                            SHOW_JITSI_WATERMARK: false,
-                            SHOW_WATERMARK_FOR_GUESTS: false,
-                        },
-                        userInfo: {
-                            displayName: userName
-                        }
-                    };
-
-                    const api = new window.JitsiMeetExternalAPI(domain, options);
-                    
-                    api.addEventListeners({
-                        videoConferenceJoined: () => {
-                            if (selectedMic) {
-                                api.setAudioInputDevice(selectedMic);
-                            }
-                            // Initial participant count
-                            setParticipants(api.getNumberOfParticipants());
-                        },
-                        audioMuteStatusChanged: (e) => {
-                            setIsMuted(e.muted);
-                        },
-                        participantJoined: () => {
-                            setParticipants(api.getNumberOfParticipants());
-                        },
-                        participantLeft: () => {
-                            setParticipants(api.getNumberOfParticipants());
-                        },
-                    });
-
-                    setJitsiApi(api);
-                }
-            }, [step]);
-
-            const toggleMute = () => {
-                if (jitsiApi) {
-                    jitsiApi.executeCommand('toggleAudio');
-                }
-            };
-
-            const leaveCall = () => {
-                if (jitsiApi) {
-                    jitsiApi.dispose();
-                    setJitsiApi(null);
-                }
-                setStep('landing');
-            };
-
-            const shareLink = () => {
-                const url = `${window.location.origin}${window.location.pathname}?room=${roomName}`;
-                navigator.clipboard.writeText(url).then(() => {
-                    alert("Secure link copied to clipboard. Share this with your partner.");
-                });
-            };
-
-            return (
-                <div className="w-full h-full relative z-10 font-sans">
-                    <div className="absolute inset-0 pointer-events-none">
-                        <div className="blob bg-brand-600/20 top-[-20%] left-[-20%] w-[80%] h-[80%]"></div>
-                        <div className="blob bg-cyan-600/20 bottom-[-20%] right-[-20%] w-[80%] h-[80%] animation-delay-2000"></div>
-                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.03]"></div>
-                    </div>
-
-                    <div id="jitsi-container" key={roomName} className="absolute top-0 left-0 w-px h-px opacity-0 pointer-events-none"></div>
-
-                    {step === 'landing' && (
-                        <div className="flex flex-col h-full p-6 animate-fade-in">
-                            <div className="flex-1 flex flex-col items-center justify-center max-w-sm mx-auto w-full">
-                                <div className="w-24 h-24 rounded-full bg-brand-500/10 flex items-center justify-center mb-8 ring-1 ring-brand-500/30 shadow-[0_0_50px_rgba(14,165,233,0.2)] animate-float">
-                                    <i className="fa-solid fa-tower-broadcast text-4xl text-brand-400"></i>
-                                </div>
-                                
-                                <h1 className="text-5xl font-display font-black text-transparent bg-clip-text bg-gradient-to-br from-white via-white to-white/50 mb-2 drop-shadow-lg tracking-tight">
-                                    UPLINK
-                                </h1>
-                                <p className="text-white/40 font-medium tracking-widest text-xs uppercase mb-12">Secure Voice Channel</p>
-
-                                <div className="w-full glass-panel rounded-[2rem] p-6 space-y-4">
-                                    <div className="bg-slate-950/50 rounded-xl border border-white/5 flex items-center px-4 transition-colors focus-within:border-brand-500/50">
-                                        <i className="fa-solid fa-hashtag text-white/30 text-sm"></i>
-                                        <input 
-                                            type="text" 
-                                            value={roomName}
-                                            onChange={(e) => setRoomName(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                                            placeholder="CHANNEL ID"
-                                            className="w-full bg-transparent border-none outline-none py-4 px-3 text-white font-mono tracking-widest text-sm placeholder:text-white/20 uppercase"
-                                        />
-                                    </div>
-
-                                    <div className="bg-slate-950/50 rounded-xl border border-white/5 flex items-center px-4 transition-colors focus-within:border-brand-500/50">
-                                        <i className="fa-solid fa-user-astronaut text-white/30 text-sm"></i>
-                                        <input 
-                                            type="text" 
-                                            value={userName}
-                                            onChange={(e) => setUserName(e.target.value)}
-                                            placeholder="CODENAME"
-                                            className="w-full bg-transparent border-none outline-none py-4 px-3 text-white font-bold text-sm placeholder:text-white/20"
-                                        />
-                                    </div>
-                                    
-                                    <button 
-                                        onClick={() => setStep('permissions')}
-                                        className="w-full bg-white text-slate-950 font-display font-bold text-lg py-4 rounded-xl shadow-[0_0_30px_rgba(255,255,255,0.1)] hover:shadow-[0_0_40px_rgba(255,255,255,0.2)] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-4"
-                                    >
-                                        INITIALIZE <i className="fa-solid fa-chevron-right text-xs"></i>
-                                    </button>
-                                </div>
-
-                                <button onClick={shareLink} className="mt-8 text-white/40 text-xs font-bold uppercase tracking-widest hover:text-white transition-colors flex items-center gap-2">
-                                    <i className="fa-solid fa-share-nodes"></i> Share Frequency
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {step === 'permissions' && (
-                        <Modal title="Hardware Check" icon="microchip">
-                            <p className="text-white/60 text-sm mb-8 leading-relaxed">
-                                To establish a secure voice uplink, we need access to your audio input hardware.
-                            </p>
-
-                            {!permissionGranted ? (
-                                <button 
-                                    onClick={getPermissions}
-                                    className="w-full bg-brand-600 text-white font-display font-bold text-lg py-4 rounded-xl shadow-[0_0_30px_rgba(14,165,233,0.3)] active:scale-[0.98] transition-all mb-4"
-                                >
-                                    GRANT ACCESS
-                                </button>
-                            ) : (
-                                <div className="w-full space-y-4 animate-fade-in">
-                                    <div className="text-left">
-                                        <label className="text-xs text-brand-400 font-bold uppercase tracking-wider ml-1 mb-2 block">Select Input Device</label>
-                                        <CustomSelect 
-                                            options={micList} 
-                                            value={selectedMic} 
-                                            onChange={setSelectedMic} 
-                                            placeholder="Choose Microphone"
-                                            icon="fa-microphone-lines"
-                                        />
-                                    </div>
-
-                                    <button 
-                                        onClick={startCall}
-                                        className="w-full bg-white text-slate-950 font-display font-bold text-lg py-4 rounded-xl shadow-[0_0_30px_rgba(255,255,255,0.1)] active:scale-[0.98] transition-all mt-6"
-                                    >
-                                        ESTABLISH LINK
-                                    </button>
-                                </div>
-                            )}
-
-                            {!permissionGranted && (
-                                <button onClick={() => setStep('landing')} className="text-white/30 text-sm font-bold mt-4 hover:text-white">
-                                    Cancel
-                                </button>
-                            )}
-                        </Modal>
-                    )}
-
-                    {step === 'call' && (
-                        <div className="flex flex-col h-full p-6 animate-slide-up relative">
-                            <div className="glass-panel-lighter rounded-full px-6 py-3 mx-auto flex items-center gap-4">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                                    <span className="text-xs font-mono text-green-400 tracking-widest">LIVE</span>
-                                </div>
-                                <div className="w-px h-3 bg-white/10"></div>
-                                <span className="text-xs font-bold text-white/60 tracking-wider">CH: {roomName}</span>
-                                <div className="w-px h-3 bg-white/10"></div>
-                                <div className="flex items-center gap-1.5">
-                                    <i className="fa-solid fa-users text-[10px] text-white/40"></i>
-                                    <span className="text-xs font-mono text-white/60">{participants}</span>
-                                </div>
-                            </div>
-
-                            <div className="flex-1 flex flex-col items-center justify-center relative">
-                                <div className={`absolute w-64 h-64 rounded-full border border-brand-500/20 transition-all duration-100 ease-out ${isMuted ? 'scale-90 opacity-20' : 'scale-100 opacity-100'}`} style={{ transform: `scale(${1 + volumeLevel/300})` }}></div>
-                                <div className={`absolute w-48 h-48 rounded-full border border-brand-500/40 transition-all duration-100 ease-out ${isMuted ? 'scale-90 opacity-20' : 'scale-100 opacity-100'}`} style={{ transform: `scale(${1 + volumeLevel/200})` }}></div>
-                                
-                                <div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all duration-500 ${isMuted ? 'bg-slate-800 shadow-none' : 'bg-gradient-to-br from-brand-400 to-brand-600 shadow-[0_0_60px_rgba(56,189,248,0.4)]'}`}>
-                                    <i className={`fa-solid ${isMuted ? 'fa-microphone-slash text-white/20' : 'fa-microphone text-white'} text-3xl transition-all duration-300`}></i>
-                                    
-                                    {!isMuted && (
-                                        <div className="absolute inset-0 rounded-full border border-brand-200 opacity-0 animate-ripple"></div>
-                                    )}
-                                </div>
-
-                                <div className="mt-8 text-center">
-                                    <h2 className="text-2xl font-display font-bold text-white mb-1">{userName}</h2>
-                                    <p className="text-brand-400/60 text-xs font-mono tracking-widest uppercase">
-                                        {isMuted ? 'TRANSMISSION MUTED' : 'TRANSMITTING AUDIO'}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="w-full max-w-sm mx-auto glass-panel rounded-[2.5rem] p-4 flex items-center justify-between gap-4">
-                                <button 
-                                    onClick={shareLink}
-                                    className="w-14 h-14 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-all active:scale-90"
-                                >
-                                    <i className="fa-solid fa-share-nodes"></i>
-                                </button>
-
-                                <button 
-                                    onClick={toggleMute}
-                                    className={`flex-1 h-20 rounded-[2rem] flex items-center justify-center gap-3 text-xl font-bold transition-all active:scale-95 shadow-lg ${isMuted ? 'bg-white text-slate-950 shadow-white/10' : 'glass-panel border-brand-500/30 text-white shadow-brand-900/20'}`}
-                                >
-                                    <i className={`fa-solid ${isMuted ? 'fa-microphone-slash' : 'fa-microphone'}`}></i>
-                                    {isMuted ? 'UNMUTE' : 'MUTE'}
-                                </button>
-
-                                <button 
-                                    onClick={leaveCall}
-                                    className="w-20 h-20 rounded-full bg-red-500/20 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/30 flex items-center justify-center transition-all active:scale-90 shadow-[0_0_30_rgba(239,68,68,0.1)]"
-                                >
-                                    <i className="fa-solid fa-phone-slash text-xl"></i>
-                                </button>
-                            </div>
-                        </div>
-                    )}
+            <!-- Central Visualizer -->
+            <div class="relative w-40 h-40 flex items-center justify-center mt-10">
+                <div id="voice-ring" class="voice-ring"></div> <!-- Animated Ring -->
+                <div class="w-32 h-32 glass-panel rounded-full flex items-center justify-center relative z-10 border border-white/20 shadow-2xl">
+                    <i id="main-mic-icon" data-lucide="mic" class="w-12 h-12 text-white transition-all duration-300"></i>
                 </div>
-            );
-        };
+                
+                <!-- Room Info Pill -->
+                <div class="absolute -bottom-16 flex flex-col items-center gap-2">
+                     <span class="text-indigo-300 font-medium tracking-wide">Connected</span>
+                     <div class="bg-white/5 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-xs text-slate-400 font-mono" id="timer-display">
+                        00:00
+                     </div>
+                </div>
+            </div>
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+            <!-- Controls Deck -->
+            <div class="glass-panel w-full p-6 flex items-center justify-around mt-auto">
+                
+                <!-- Share Button -->
+                <button id="share-btn" class="glass-button w-14 h-14 rounded-full flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10" title="Copy Link">
+                    <i data-lucide="share-2" class="w-6 h-6"></i>
+                </button>
+
+                <!-- Mute Button (Main) -->
+                <button id="mute-btn" class="w-20 h-20 bg-white text-slate-900 rounded-full flex items-center justify-center shadow-lg shadow-white/10 hover:bg-slate-200 active:scale-95 transition-all mx-4">
+                    <i id="mute-icon" data-lucide="mic" class="w-8 h-8 fill-current"></i>
+                </button>
+
+                <!-- Leave Button -->
+                <button id="leave-btn" class="glass-button w-14 h-14 rounded-full flex items-center justify-center text-red-400 hover:text-red-300 hover:bg-red-500/10 border-red-500/20" title="Disconnect">
+                    <i data-lucide="phone-off" class="w-6 h-6"></i>
+                </button>
+
+            </div>
+            
+            <div id="toast" class="absolute top-[-80px] left-1/2 -translate-x-1/2 bg-slate-800/90 text-white text-xs px-4 py-2 rounded-full backdrop-blur-md border border-white/10 opacity-0 transition-opacity pointer-events-none">
+                Link copied to clipboard
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Hidden Jitsi Container -->
+    <div id="meet-container"></div>
+
+    <script>
+        // --- STATE & UTILS ---
+        let api = null;
+        let isMuted = false;
+        let callDuration = 0;
+        let timerInterval = null;
+        let roomName = '';
+        
+        // --- DOM ELEMENTS ---
+        const preflightScreen = document.getElementById('preflight-screen');
+        const callScreen = document.getElementById('call-screen');
+        const micSelect = document.getElementById('mic-select');
+        const speakerSelect = document.getElementById('speaker-select');
+        const joinBtn = document.getElementById('join-btn');
+        const leaveBtn = document.getElementById('leave-btn');
+        const muteBtn = document.getElementById('mute-btn');
+        const shareBtn = document.getElementById('share-btn');
+        const statusDot = document.querySelector('#connection-status div');
+        const statusText = document.querySelector('#connection-status span');
+        const voiceRing = document.getElementById('voice-ring');
+        const mainMicIcon = document.getElementById('main-mic-icon');
+        const muteIcon = document.getElementById('mute-icon');
+        const timerDisplay = document.getElementById('timer-display');
+        const toast = document.getElementById('toast');
+
+        // --- INITIALIZATION ---
+        lucide.createIcons();
+        
+        // 1. Check URL for Room ID or generate new
+        const urlParams = new URLSearchParams(window.location.search);
+        roomName = urlParams.get('room') || 'Voice_' + Math.random().toString(36).substring(7);
+
+        // Update URL if room wasn't present (for sharing)
+        if (!urlParams.get('room')) {
+            try {
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.set('room', roomName);
+                window.history.pushState({}, '', newUrl);
+            } catch (e) {
+                // In blob/iframe contexts, pushState might fail. 
+                // We ignore this error and rely on the roomName variable.
+                console.warn('Could not update URL history:', e);
+            }
+        }
+
+        // 2. Hardware Access & Enumeration
+        async function getDevices() {
+            try {
+                // Request permissions first to populate labels
+                await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                
+                micSelect.innerHTML = '';
+                speakerSelect.innerHTML = '';
+
+                devices.forEach(device => {
+                    const option = document.createElement('option');
+                    option.value = device.deviceId;
+                    option.text = device.label || `${device.kind} - ${device.deviceId.slice(0, 5)}...`;
+                    
+                    if (device.kind === 'audioinput') {
+                        micSelect.appendChild(option);
+                    } else if (device.kind === 'audiooutput') {
+                        speakerSelect.appendChild(option);
+                    }
+                });
+
+                // If no speakers found (e.g. mobile sometimes hides this), add default
+                if (speakerSelect.options.length === 0) {
+                    const opt = document.createElement('option');
+                    opt.text = "Default System Output";
+                    speakerSelect.appendChild(opt);
+                }
+
+            } catch (err) {
+                console.error("Permission denied or error", err);
+                // We can still try to join even if enumeration failed, 
+                // but permission is usually needed for audio anyway.
+            }
+        }
+
+        // Initialize devices on load
+        getDevices();
+
+
+        // --- ACTION HANDLERS ---
+
+        joinBtn.addEventListener('click', () => {
+            const selectedMic = micSelect.value;
+            const selectedSpeaker = speakerSelect.value;
+            
+            // UI Transition
+            preflightScreen.classList.add('hidden-ui');
+            callScreen.classList.remove('hidden-ui');
+            callScreen.classList.add('fade-in'); // Add animation class
+            callScreen.style.display = 'flex'; // Ensure flex layout applies
+
+            startJitsi(selectedMic, selectedSpeaker);
+        });
+
+        leaveBtn.addEventListener('click', () => {
+            if (api) {
+                api.dispose();
+                api = null;
+            }
+            clearInterval(timerInterval);
+            resetUI();
+        });
+
+        muteBtn.addEventListener('click', () => {
+            if (api) {
+                api.executeCommand('toggleAudio');
+                // State update happens in event listener 'audioMuteStatusChanged'
+            }
+        });
+
+        shareBtn.addEventListener('click', () => {
+            // Construct link dynamically to ensure room param is present
+            // even if pushState failed during init.
+            const urlObj = new URL(window.location.href);
+            urlObj.searchParams.set('room', roomName);
+            const link = urlObj.toString();
+            
+            // Clipboard API might fail if not in secure context or if document not focused
+            if (navigator.share) {
+                 navigator.share({
+                    title: 'Join Voice Call',
+                    text: 'Join my secure voice channel here:',
+                    url: link,
+                }).catch(console.error);
+            } else {
+                navigator.clipboard.writeText(link).then(() => {
+                    showToast();
+                }).catch(() => {
+                    // Fallback
+                    const input = document.createElement('input');
+                    input.value = link;
+                    document.body.appendChild(input);
+                    input.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(input);
+                    showToast();
+                });
+            }
+        });
+
+        // --- JITSI LOGIC ---
+
+        function startJitsi(micId, speakerId) {
+            updateStatus('connecting');
+
+            const domain = 'meet.jit.si';
+            const options = {
+                roomName: roomName,
+                width: '100%',
+                height: '100%',
+                parentNode: document.querySelector('#meet-container'),
+                configOverwrite: {
+                    startWithVideoMuted: true,
+                    startWithAudioMuted: false,
+                    disableDeepLinking: true,
+                    prejoinPageEnabled: false,
+                    enableWelcomePage: false,
+                    toolbarButtons: [] // HIDE NATIVE UI
+                },
+                interfaceConfigOverwrite: {
+                    TOOLBAR_BUTTONS: [],
+                    filmStripOnly: true,
+                    SHOW_JITSI_WATERMARK: false,
+                    SHOW_WATERMARK_FOR_GUESTS: false,
+                },
+                userInfo: {
+                    displayName: "User"
+                }
+            };
+
+            api = new JitsiMeetExternalAPI(domain, options);
+
+            api.addEventListeners({
+                videoConferenceJoined: () => {
+                    updateStatus('connected');
+                    startTimer();
+                    
+                    // Set devices if selected
+                    if (micId) api.setAudioInputDevice(micId);
+                    if (speakerId) api.setAudioOutputDevice(speakerId);
+                    
+                    // Initial State Check
+                    isMuted = false;
+                    updateMuteUI();
+                },
+                videoConferenceLeft: () => {
+                    leaveBtn.click(); // Trigger cleanup
+                },
+                audioMuteStatusChanged: (e) => {
+                    isMuted = e.muted;
+                    updateMuteUI();
+                }
+            });
+        }
+
+        // --- UI HELPERS ---
+
+        function updateMuteUI() {
+            if (isMuted) {
+                // Muted State
+                muteBtn.classList.add('bg-slate-700', 'text-slate-400');
+                muteBtn.classList.remove('bg-white', 'text-slate-900', 'shadow-white/10');
+                muteIcon.setAttribute('class', 'w-8 h-8 text-slate-400'); // Remove fill
+                
+                mainMicIcon.setAttribute('data-lucide', 'mic-off');
+                mainMicIcon.classList.add('text-slate-600');
+                mainMicIcon.classList.remove('text-white');
+                
+                voiceRing.classList.remove('active');
+            } else {
+                // Active State
+                muteBtn.classList.remove('bg-slate-700', 'text-slate-400');
+                muteBtn.classList.add('bg-white', 'text-slate-900', 'shadow-white/10');
+                muteIcon.setAttribute('class', 'w-8 h-8 fill-current');
+
+                mainMicIcon.setAttribute('data-lucide', 'mic');
+                mainMicIcon.classList.remove('text-slate-600');
+                mainMicIcon.classList.add('text-white');
+                
+                voiceRing.classList.add('active');
+            }
+            lucide.createIcons();
+        }
+
+        function updateStatus(state) {
+            if (state === 'connecting') {
+                statusDot.className = 'w-2 h-2 rounded-full bg-yellow-400 animate-pulse';
+                statusText.innerText = 'Secure Handshake...';
+                statusText.className = 'text-xs text-yellow-400 font-medium';
+            } else if (state === 'connected') {
+                statusDot.className = 'w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]';
+                statusText.innerText = 'Encrypted Voice Active';
+                statusText.className = 'text-xs text-emerald-400 font-medium tracking-wide';
+            } else {
+                statusDot.className = 'w-2 h-2 rounded-full bg-slate-600';
+                statusText.innerText = 'Idle';
+                statusText.className = 'text-xs text-slate-500 font-medium';
+            }
+        }
+
+        function startTimer() {
+            callDuration = 0;
+            timerDisplay.innerText = "00:00";
+            timerInterval = setInterval(() => {
+                callDuration++;
+                const mins = Math.floor(callDuration / 60).toString().padStart(2, '0');
+                const secs = (callDuration % 60).toString().padStart(2, '0');
+                timerDisplay.innerText = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        function resetUI() {
+            updateStatus('idle');
+            callScreen.classList.add('hidden-ui');
+            callScreen.style.display = 'none';
+            preflightScreen.classList.remove('hidden-ui');
+            voiceRing.classList.remove('active');
+        }
+
+        function showToast() {
+            toast.style.opacity = '1';
+            toast.style.transform = 'translate(-50%, -60px)';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, -50px)';
+            }, 2000);
+        }
+
     </script>
 </body>
 </html>
