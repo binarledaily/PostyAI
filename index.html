@@ -221,7 +221,9 @@
                 const params = new URLSearchParams(window.location.search);
                 const roomParam = params.get('room');
                 if (roomParam) {
-                    setRoomName(roomParam.toUpperCase());
+                    // Sanitize and normalize room name from URL
+                    const sanitized = roomParam.trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+                    setRoomName(sanitized);
                 } else {
                     const randomId = Math.random().toString(36).substring(2, 8).toUpperCase();
                     setRoomName(randomId);
@@ -277,11 +279,13 @@
 
             useEffect(() => {
                 if (step === 'call' && !jitsiApi) {
-                    // Force room name to uppercase for consistency across users
-                    const cleanRoom = roomName.trim().toUpperCase() || "LOBBY";
+                    // CRITICAL FIX: Sanitize input and force lowercase for Jitsi backend naming consistency
+                    // This ensures "Room1" and "room1" land in the same Jitsi channel
+                    const sanitizedRoom = roomName.trim().replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || "lobby";
+                    
                     const domain = 'meet.jit.si';
                     const options = {
-                        roomName: `UplinkSecure_${cleanRoom}`,
+                        roomName: `UplinkSecure_${sanitizedRoom}`,
                         width: '100%',
                         height: '100%',
                         parentNode: document.getElementById('jitsi-container'),
@@ -317,8 +321,12 @@
                         audioMuteStatusChanged: (e) => {
                             setIsMuted(e.muted);
                         },
-                        participantJoined: () => setParticipants(api.getNumberOfParticipants()),
-                        participantLeft: () => setParticipants(api.getNumberOfParticipants()),
+                        participantJoined: () => {
+                            setParticipants(api.getNumberOfParticipants());
+                        },
+                        participantLeft: () => {
+                            setParticipants(api.getNumberOfParticipants());
+                        },
                     });
 
                     setJitsiApi(api);
@@ -342,7 +350,7 @@
             const shareLink = () => {
                 const url = `${window.location.origin}${window.location.pathname}?room=${roomName}`;
                 navigator.clipboard.writeText(url).then(() => {
-                    alert("Secure link copied to clipboard.");
+                    alert("Secure link copied to clipboard. Share this with your partner.");
                 });
             };
 
@@ -374,7 +382,7 @@
                                         <input 
                                             type="text" 
                                             value={roomName}
-                                            onChange={(e) => setRoomName(e.target.value.toUpperCase())}
+                                            onChange={(e) => setRoomName(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
                                             placeholder="CHANNEL ID"
                                             className="w-full bg-transparent border-none outline-none py-4 px-3 text-white font-mono tracking-widest text-sm placeholder:text-white/20 uppercase"
                                         />
