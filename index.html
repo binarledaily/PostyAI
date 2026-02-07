@@ -4,491 +4,246 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vocal - Pure Voice Chat</title>
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com/"></script>
-    
-    <!-- Google Fonts -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-
-    <!-- Jitsi Meet API -->
     <script src="https://meet.jit.si/external_api.js"></script>
-
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #0f1115;
-            color: #e2e8f0;
-            overflow: hidden;
-        }
-
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #1e293b; 
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #475569; 
-            border-radius: 10px;
+        body { font-family: 'Inter', sans-serif; background-color: #0f1115; color: #e2e8f0; overflow: hidden; }
+        
+        /* The Secret Fix: Keep Jitsi "visible" to the browser so it doesn't throttle audio */
+        #jitsi-container {
+            position: fixed;
+            top: -10px;
+            left: -10px;
+            width: 1px;
+            height: 1px;
+            z-index: 1;
+            pointer-events: none;
         }
 
         @keyframes pulse-ring {
             0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(99, 102, 241, 0); }
+            70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(99, 102, 241, 0); }
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
         }
-
-        .speaking-pulse {
-            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
-        }
-
-        .glass-panel {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .glass-button {
-            background: rgba(255, 255, 255, 0.05);
-            transition: all 0.2s ease;
-        }
-        .glass-button:hover {
-            background: rgba(255, 255, 255, 1);
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        #jitsi-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%; 
-            height: 100%;
-            opacity: 0;
-            pointer-events: none;
-            z-index: -50;
-        }
-
-        .page-transition {
-            transition: opacity 0.4s ease, transform 0.4s ease;
-        }
-        .hidden-page {
-            opacity: 0;
-            pointer-events: none;
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            transform: scale(0.98);
-            z-index: -1;
-        }
-        .active-page {
-            opacity: 1;
-            pointer-events: all;
-            position: relative;
-            transform: scale(1);
-            z-index: 10;
-        }
+        .speaking-pulse { animation: pulse-ring 2s infinite; border: 2px solid #6366f1 !important; }
+        .page-transition { transition: opacity 0.3s ease, transform 0.3s ease; }
+        .hidden-page { opacity: 0; pointer-events: none; position: absolute; transform: scale(0.95); z-index: -1; }
+        .active-page { opacity: 1; pointer-events: all; position: relative; transform: scale(1); z-index: 10; }
     </style>
 </head>
-<body class="h-screen w-screen flex items-center justify-center bg-[#0f1115] relative">
-
-    <div class="fixed top-0 left-0 w-full h-full overflow-hidden -z-10">
-        <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-900/20 rounded-full blur-[120px]"></div>
-        <div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-900/20 rounded-full blur-[120px]"></div>
-    </div>
+<body class="h-screen w-screen flex items-center justify-center bg-[#0f1115]">
 
     <div id="jitsi-container"></div>
 
-    <div class="w-full max-w-md h-full md:h-auto md:min-h-[600px] flex flex-col relative">
-
+    <div class="w-full max-w-md h-full md:h-auto md:min-h-[600px] flex flex-col relative p-4">
         <!-- SCREEN 1: LANDING -->
-        <div id="screen-landing" class="active-page w-full h-full flex flex-col items-center justify-center p-6 page-transition">
-            <div class="mb-8 p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20">
-                <i data-lucide="mic" class="w-10 h-10 text-indigo-400"></i>
+        <div id="screen-landing" class="active-page w-full h-full flex flex-col items-center justify-center space-y-6">
+            <div class="p-5 bg-indigo-500/10 rounded-3xl border border-indigo-500/20">
+                <i data-lucide="mic" class="w-12 h-12 text-indigo-400"></i>
             </div>
-            <h1 class="text-3xl font-bold text-white mb-2 tracking-tight">Vocal</h1>
-            <p class="text-slate-400 mb-10 text-center text-sm">Create a space. Talk freely.</p>
-            
-            <div id="file-protocol-warning" class="hidden w-full bg-red-500/10 border border-red-500/20 rounded-xl p-3 mb-6 text-center">
-                <p class="text-red-400 text-xs font-medium">⚠️ Restricted Environment</p>
-                <p class="text-red-300 text-[10px] mt-1">
-                    Microphone access requires a secure context (HTTPS/Localhost). Audio functionality may be limited.
-                </p>
+            <div class="text-center">
+                <h1 class="text-4xl font-bold text-white tracking-tight">Vocal</h1>
+                <p class="text-slate-500 mt-2">Private, high-fidelity voice spaces.</p>
             </div>
-            
-            <div class="w-full space-y-4">
-                <div class="relative group">
-                    <label class="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider ml-1">Display Name</label>
-                    <input type="text" id="username-input" placeholder="Enter your name" 
-                        class="w-full bg-[#1a1d24] text-white border border-slate-700 rounded-xl px-4 py-3.5 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder:text-slate-600">
-                </div>
-
-                <button id="btn-to-setup" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3.5 rounded-xl transition-all shadow-lg shadow-indigo-900/20 flex items-center justify-center gap-2">
-                    <span>Continue</span>
-                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            <div class="w-full space-y-4 pt-4">
+                <input type="text" id="username-input" placeholder="Your Name" 
+                    class="w-full bg-slate-900 border border-slate-800 rounded-2xl px-5 py-4 text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                <button id="btn-to-setup" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-2xl shadow-xl transition-all">
+                    Get Started
                 </button>
             </div>
         </div>
 
         <!-- SCREEN 2: SETUP -->
-        <div id="screen-setup" class="hidden-page w-full h-full flex flex-col items-center justify-center p-6 page-transition">
-            <h2 class="text-2xl font-semibold text-white mb-6">Audio Setup</h2>
-            
-            <div class="relative w-32 h-32 mb-8 flex items-center justify-center">
-                <div id="setup-visualizer-ring" class="absolute inset-0 rounded-full border-2 border-indigo-500/30 transition-all duration-100"></div>
-                <div class="w-24 h-24 bg-slate-800 rounded-full flex items-center justify-center z-10 relative overflow-hidden">
-                    <i data-lucide="mic" class="w-8 h-8 text-indigo-400"></i>
-                    <div id="mic-level-fill" class="absolute bottom-0 left-0 w-full bg-indigo-500/20 transition-all duration-75" style="height: 0%"></div>
+        <div id="screen-setup" class="hidden-page w-full h-full flex flex-col items-center justify-center space-y-8">
+            <h2 class="text-2xl font-bold">Audio Check</h2>
+            <div class="relative">
+                <div id="setup-ring" class="w-32 h-32 rounded-full border-4 border-slate-800 flex items-center justify-center transition-all duration-75">
+                    <i data-lucide="mic" class="w-10 h-10 text-indigo-400"></i>
                 </div>
             </div>
-
             <div class="w-full space-y-4">
+                <select id="mic-select" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-white outline-none cursor-pointer"></select>
+                <div class="flex gap-3">
+                    <button id="btn-back" class="flex-1 bg-slate-800 py-4 rounded-xl font-bold">Back</button>
+                    <button id="btn-join" class="flex-[2] bg-indigo-600 py-4 rounded-xl font-bold shadow-lg">Join Room</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN 3: ROOM -->
+        <div id="screen-room" class="hidden-page w-full h-full flex flex-col bg-slate-900/50 border border-white/5 rounded-[2.5rem] overflow-hidden backdrop-blur-xl">
+            <div class="p-6 border-b border-white/5 flex justify-between items-center">
                 <div>
-                    <label class="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider ml-1">Microphone</label>
-                    <div class="relative">
-                        <select id="mic-select" class="w-full bg-[#1a1d24] text-white border border-slate-700 rounded-xl px-4 py-3.5 pr-10 appearance-none focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all cursor-pointer">
-                            <option value="" disabled selected>Select microphone...</option>
-                        </select>
-                        <i data-lucide="chevron-down" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none"></i>
-                    </div>
-                    <p id="perm-status" class="text-xs text-yellow-500 mt-2 hidden">Waiting for permissions...</p>
-                    <button id="btn-force-join" class="hidden text-xs text-indigo-400 mt-2 hover:underline">
-                        Microphone blocked? Try joining anyway.
-                    </button>
+                    <h3 id="room-title" class="text-lg font-bold">Room</h3>
+                    <p class="text-xs text-slate-500 flex items-center gap-1">
+                        <span class="w-2 h-2 bg-emerald-500 rounded-full"></span> 
+                        <span id="participant-count">1</span> online
+                    </p>
                 </div>
-
-                <div class="grid grid-cols-2 gap-3 pt-2">
-                     <button id="btn-back-landing" class="glass-button text-slate-300 font-medium py-3.5 rounded-xl flex items-center justify-center gap-2">
-                        Back
-                    </button>
-                    <button id="btn-join-room" disabled class="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-3.5 rounded-xl transition-all shadow-lg shadow-indigo-900/20 flex items-center justify-center gap-2">
-                        Join Room
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- SCREEN 3: ACTIVE ROOM -->
-        <div id="screen-room" class="hidden-page w-full h-full flex flex-col page-transition bg-[#0f1115] md:rounded-2xl md:border md:border-slate-800 overflow-hidden">
-            <div class="h-16 border-b border-slate-800/50 flex items-center justify-between px-6 bg-[#0f1115]/80 backdrop-blur-md z-20">
-                <div class="flex items-center gap-2">
-                    <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                    <span id="room-display-name" class="font-medium text-sm text-slate-200">Room Name</span>
-                </div>
-                <div class="flex items-center gap-3">
-                    <button id="btn-copy-link" class="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
-                        <i data-lucide="link" class="w-4 h-4"></i>
-                    </button>
-                    <div class="px-2.5 py-1 rounded-full bg-slate-800/50 border border-slate-700/50 text-xs font-medium text-slate-400" id="participant-count">1</div>
-                </div>
+                <button id="btn-copy" class="p-3 bg-white/5 rounded-2xl hover:bg-white/10 transition-colors">
+                    <i data-lucide="share-2" class="w-5 h-5"></i>
+                </button>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-6 relative">
-                <div id="connection-status" class="absolute top-6 left-0 w-full text-center pointer-events-none opacity-0 transition-opacity">
-                    <span class="bg-slate-800/90 text-slate-300 px-3 py-1 rounded-full text-xs border border-slate-700">Connecting...</span>
-                </div>
-                <div id="participants-grid" class="grid grid-cols-2 gap-4 auto-rows-fr"></div>
+            <div id="participants-grid" class="flex-1 overflow-y-auto p-6 grid grid-cols-2 gap-4 auto-rows-min">
+                <!-- Participants added here -->
             </div>
 
-            <div class="h-24 glass-panel border-t border-slate-800/50 flex items-center justify-center gap-6 px-6 pb-2">
-                <button id="btn-toggle-mic" class="w-14 h-14 rounded-full bg-slate-800 text-white flex items-center justify-center hover:bg-slate-700 transition-all shadow-lg border border-slate-700 group relative">
+            <div class="p-8 flex justify-center gap-6">
+                <button id="btn-mute" class="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center border border-white/10 transition-all">
                     <i data-lucide="mic" class="w-6 h-6"></i>
-                    <div class="absolute -bottom-6 text-[10px] text-slate-500 font-medium">MUTE</div>
                 </button>
-                <button id="btn-leave" class="w-14 h-14 rounded-full bg-red-500/10 text-red-500 border border-red-500/20 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-lg group relative">
+                <button id="btn-leave" class="w-16 h-16 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center border border-red-500/20">
                     <i data-lucide="phone-off" class="w-6 h-6"></i>
-                    <div class="absolute -bottom-6 text-[10px] text-slate-500 font-medium">LEAVE</div>
                 </button>
             </div>
         </div>
-
-    </div>
-
-    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-4 py-2 rounded-lg shadow-xl border border-slate-700 transform translate-y-20 opacity-0 transition-all duration-300 z-50 text-sm flex items-center gap-2">
-        <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
-        <span id="toast-msg">Notification</span>
     </div>
 
     <script>
         const state = {
-            displayName: '',
-            roomName: '',
-            micId: null,
-            isMuted: false,
+            name: '',
+            room: '',
             api: null,
-            localId: null
-        };
-
-        const screens = {
-            landing: document.getElementById('screen-landing'),
-            setup: document.getElementById('screen-setup'),
-            room: document.getElementById('screen-room')
-        };
-        const inputs = {
-            username: document.getElementById('username-input'),
-            micSelect: document.getElementById('mic-select')
-        };
-        const buttons = {
-            toSetup: document.getElementById('btn-to-setup'),
-            backLanding: document.getElementById('btn-back-landing'),
-            joinRoom: document.getElementById('btn-join-room'),
-            toggleMic: document.getElementById('btn-toggle-mic'),
-            leave: document.getElementById('btn-leave'),
-            copyLink: document.getElementById('btn-copy-link'),
-            forceJoin: document.getElementById('btn-force-join')
-        };
-        const ui = {
-            roomDisplayName: document.getElementById('room-display-name'),
-            participantCount: document.getElementById('participant-count'),
-            grid: document.getElementById('participants-grid'),
-            permStatus: document.getElementById('perm-status'),
-            micFill: document.getElementById('mic-level-fill'),
-            setupRing: document.getElementById('setup-visualizer-ring'),
-            toast: document.getElementById('toast'),
-            toastMsg: document.getElementById('toast-msg'),
-            protocolWarning: document.getElementById('file-protocol-warning')
+            localId: null,
+            muted: false,
+            micId: null
         };
 
         const refreshIcons = () => lucide.createIcons();
 
-        function showScreen(screenName) {
-            Object.values(screens).forEach(el => {
-                el.classList.remove('active-page');
-                el.classList.add('hidden-page');
+        function nav(id) {
+            document.querySelectorAll('.active-page').forEach(el => {
+                el.classList.replace('active-page', 'hidden-page');
             });
-            screens[screenName].classList.remove('hidden-page');
-            screens[screenName].classList.add('active-page');
+            document.getElementById(`screen-${id}`).classList.replace('hidden-page', 'active-page');
             refreshIcons();
-        }
-
-        function showToast(msg) {
-            ui.toastMsg.innerText = msg;
-            ui.toast.classList.remove('translate-y-20', 'opacity-0');
-            setTimeout(() => {
-                ui.toast.classList.add('translate-y-20', 'opacity-0');
-            }, 3000);
         }
 
         window.onload = () => {
+            const params = new URLSearchParams(window.location.search);
+            state.room = params.get('room') || `vocal-${Math.random().toString(36).substr(2, 5)}`;
             refreshIcons();
-
-            // Detect environment constraints
-            if (window.location.protocol === 'file:' || window.location.protocol === 'blob:') {
-                ui.protocolWarning.classList.remove('hidden');
-            }
-            
-            const urlParams = new URLSearchParams(window.location.search);
-            const roomId = urlParams.get('room');
-            
-            if (roomId) {
-                state.roomName = roomId.toLowerCase();
-                buttons.toSetup.innerHTML = `<span>Join Room</span> <i data-lucide="arrow-right" class="w-4 h-4"></i>`;
-            } else {
-                const adjs = ['quiet', 'happy', 'blue', 'cosmic', 'vocal', 'neon', 'urban'];
-                const nouns = ['room', 'space', 'pod', 'loft', 'den'];
-                state.roomName = `${adjs[Math.floor(Math.random()*adjs.length)]}${nouns[Math.floor(Math.random()*nouns.length)]}-${Math.floor(Math.random() * 999)}`;
-            }
         };
 
-        buttons.toSetup.addEventListener('click', () => {
-            const name = inputs.username.value.trim();
-            if (!name) {
-                inputs.username.classList.add('border-red-500');
-                return;
-            }
-            state.displayName = name;
-            showScreen('setup');
-            requestAudioPermissions();
-        });
-
-        buttons.backLanding.addEventListener('click', () => showScreen('landing'));
-
-        let localStream = null;
-        let setupAnimationFrame = null;
-
-        async function requestAudioPermissions() {
-            ui.permStatus.classList.remove('hidden');
-            ui.permStatus.innerText = "Requesting mic access...";
+        document.getElementById('btn-to-setup').onclick = async () => {
+            state.name = document.getElementById('username-input').value.trim();
+            if (!state.name) return;
+            nav('setup');
             
             try {
-                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                    throw new Error("Secure Context Required");
-                }
-
-                localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                ui.permStatus.classList.replace('text-yellow-500', 'text-emerald-500');
-                ui.permStatus.innerText = "Access granted.";
-                buttons.joinRoom.disabled = false;
-
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 const devices = await navigator.mediaDevices.enumerateDevices();
-                const audioInputs = devices.filter(d => d.kind === 'audioinput');
+                const mics = devices.filter(d => d.kind === 'audioinput');
+                const select = document.getElementById('mic-select');
+                select.innerHTML = mics.map(m => `<option value="${m.deviceId}">${m.label || 'Mic'}</option>`).join('');
                 
-                inputs.micSelect.innerHTML = '';
-                audioInputs.forEach(device => {
-                    const opt = document.createElement('option');
-                    opt.value = device.deviceId;
-                    opt.text = device.label || `Microphone ${inputs.micSelect.length + 1}`;
-                    inputs.micSelect.appendChild(opt);
-                });
+                // Audio visualization in setup
+                const audioCtx = new AudioContext();
+                const source = audioCtx.createMediaStreamSource(stream);
+                const analyzer = audioCtx.createAnalyser();
+                source.connect(analyzer);
+                const data = new Uint8Array(analyzer.frequencyBinCount);
+                
+                const draw = () => {
+                    analyzer.getByteFrequencyData(data);
+                    const vol = data.reduce((a, b) => a + b) / data.length;
+                    document.getElementById('setup-ring').style.transform = `scale(${1 + vol/100})`;
+                    document.getElementById('setup-ring').style.borderColor = `rgba(99, 102, 241, ${vol/50})`;
+                    if (document.getElementById('screen-setup').classList.contains('active-page')) requestAnimationFrame(draw);
+                };
+                draw();
+            } catch (e) { console.error(e); }
+        };
 
-                startSetupVisualizer(localStream);
-                if (audioInputs.length > 0) state.micId = audioInputs[0].deviceId;
-
-            } catch (err) {
-                ui.permStatus.classList.replace('text-yellow-500', 'text-red-500');
-                ui.permStatus.innerText = "Mic blocked. Try joining manually.";
-                buttons.forceJoin.classList.remove('hidden');
-            }
-        }
-
-        buttons.forceJoin.addEventListener('click', () => {
-             buttons.joinRoom.disabled = false;
-             buttons.joinRoom.click();
-        });
-
-        function startSetupVisualizer(stream) {
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const src = audioCtx.createMediaStreamSource(stream);
-            const analyzer = audioCtx.createAnalyser();
-            analyzer.fftSize = 64;
-            src.connect(analyzer);
-            
-            const data = new Uint8Array(analyzer.frequencyBinCount);
-            const update = () => {
-                if(screens.setup.classList.contains('hidden-page')) return;
-                analyzer.getByteFrequencyData(data);
-                let sum = 0;
-                for(let i=0; i<data.length; i++) sum += data[i];
-                const vol = Math.min(100, (sum / data.length / 128) * 100);
-                ui.micFill.style.height = `${vol}%`;
-                ui.setupRing.style.transform = `scale(${1 + (vol / 200)})`;
-                setupAnimationFrame = requestAnimationFrame(update);
-            };
-            update();
-        }
-
-        buttons.joinRoom.addEventListener('click', () => {
-            if (localStream) {
-                localStream.getTracks().forEach(t => t.stop());
-                cancelAnimationFrame(setupAnimationFrame);
-            }
-            showScreen('room');
-            ui.roomDisplayName.innerText = state.roomName;
+        document.getElementById('btn-join').onclick = () => {
+            state.micId = document.getElementById('mic-select').value;
+            nav('room');
+            document.getElementById('room-title').innerText = state.room;
             initJitsi();
-        });
+        };
 
         function initJitsi() {
             const options = {
-                roomName: state.roomName,
-                width: '100%',
-                height: '100%',
+                roomName: state.room,
                 parentNode: document.getElementById('jitsi-container'),
+                userInfo: { displayName: state.name },
                 configOverwrite: {
                     startAudioOnly: true,
-                    disableDeepLinking: true, 
+                    startWithVideoMuted: true,
                     prejoinPageEnabled: false,
-                    toolbarButtons: []
+                    disableAudioLevels: false, // Essential for speaker detection
+                    enableNoAudioDetection: true,
+                    enableNoisyMicDetection: true
                 },
                 interfaceConfigOverwrite: {
                     TOOLBAR_BUTTONS: [],
                     SHOW_JITSI_WATERMARK: false
-                },
-                userInfo: { displayName: state.displayName }
+                }
             };
-
             state.api = new JitsiMeetExternalAPI('meet.jit.si', options);
 
-            state.api.addEventListener('videoConferenceJoined', (e) => {
-                state.localId = e.id;
-                if (state.micId) state.api.setAudioInputDevice(state.micId);
-                addParticipantUI(state.localId, state.displayName, true);
-                updateParticipantCount();
-            });
-
-            state.api.addEventListener('participantJoined', (e) => {
-                addParticipantUI(e.id, e.displayName, false);
-                updateParticipantCount();
-                showToast(`${e.displayName} joined`);
-            });
-
-            state.api.addEventListener('participantLeft', (e) => {
-                removeParticipantUI(e.id);
-                updateParticipantCount();
-            });
-
-            state.api.addEventListener('dominantSpeakerChanged', (e) => {
-                document.querySelectorAll('.participant-card').forEach(el => el.classList.remove('border-indigo-500'));
-                const el = document.getElementById(`participant-${e.id}`);
-                if (el) {
-                    el.classList.add('border-indigo-500');
-                    el.querySelector('.speaker-visual').classList.add('speaking-pulse');
+            state.api.addEventListeners({
+                videoConferenceJoined: (e) => {
+                    state.localId = e.id;
+                    if (state.micId) state.api.setAudioInputDevice(state.micId);
+                    addParticipant(e.id, state.name, true);
+                    updateCount();
+                },
+                participantJoined: (e) => {
+                    addParticipant(e.id, e.displayName);
+                    updateCount();
+                },
+                participantLeft: (e) => {
+                    document.getElementById(`p-${e.id}`)?.remove();
+                    updateCount();
+                },
+                dominantSpeakerChanged: (e) => {
+                    document.querySelectorAll('.p-card').forEach(c => c.classList.remove('speaking-pulse'));
+                    document.getElementById(`p-${e.id}`)?.classList.add('speaking-pulse');
                 }
-                setTimeout(() => {
-                    document.querySelectorAll('.speaker-visual').forEach(v => v.classList.remove('speaking-pulse'));
-                }, 2000);
             });
         }
 
-        function addParticipantUI(id, name, isLocal) {
-            if (document.getElementById(`participant-${id}`)) return;
-            const div = document.createElement('div');
-            div.id = `participant-${id}`;
-            div.className = "participant-card bg-[#1e2329] border border-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center relative transition-all duration-300 shadow-lg h-40";
-            const initials = (name || "U").substring(0, 2).toUpperCase();
-            div.innerHTML = `
-                <div class="speaker-visual w-20 h-20 rounded-full bg-slate-700 flex items-center justify-center mb-3 relative">
-                    <span class="text-xl font-bold text-slate-300">${initials}</span>
+        function addParticipant(id, name, isMe = false) {
+            if (document.getElementById(`p-${id}`)) return;
+            const grid = document.getElementById('participants-grid');
+            const card = document.createElement('div');
+            card.id = `p-${id}`;
+            card.className = `p-card bg-slate-800/50 border border-white/5 p-6 rounded-[2rem] flex flex-col items-center gap-3 transition-all duration-500`;
+            card.innerHTML = `
+                <div class="w-16 h-16 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-xl">
+                    ${(name || 'U')[0].toUpperCase()}
                 </div>
-                <div class="text-sm font-medium text-slate-200 truncate w-full text-center px-2">${name} ${isLocal ? '(You)' : ''}</div>
-                <div class="mic-status-icon absolute top-3 right-3 bg-slate-900/50 p-1.5 rounded-full">
-                    <i data-lucide="mic" class="w-3 h-3 text-slate-500"></i>
-                </div>
+                <span class="text-sm font-medium text-slate-300 truncate w-full text-center">${name || 'User'} ${isMe ? '(You)' : ''}</span>
             `;
-            ui.grid.appendChild(div);
-            refreshIcons();
+            grid.appendChild(card);
         }
 
-        function removeParticipantUI(id) {
-            const el = document.getElementById(`participant-${id}`);
-            if (el) el.remove();
+        function updateCount() {
+            document.getElementById('participant-count').innerText = document.getElementById('participants-grid').children.length;
         }
 
-        function updateParticipantCount() {
-            ui.participantCount.innerText = ui.grid.children.length;
-        }
-
-        buttons.toggleMic.addEventListener('click', () => {
-            state.isMuted = !state.isMuted;
+        document.getElementById('btn-mute').onclick = () => {
+            state.muted = !state.muted;
             state.api.executeCommand('toggleAudio');
-            const icon = buttons.toggleMic.querySelector('i');
-            if (state.isMuted) {
-                buttons.toggleMic.classList.replace('bg-slate-800', 'bg-red-500');
-                icon.setAttribute('data-lucide', 'mic-off');
-            } else {
-                buttons.toggleMic.classList.replace('bg-red-500', 'bg-slate-800');
-                icon.setAttribute('data-lucide', 'mic');
-            }
+            const btn = document.getElementById('btn-mute');
+            btn.classList.toggle('bg-red-500/20', state.muted);
+            btn.classList.toggle('text-red-500', state.muted);
+            btn.innerHTML = `<i data-lucide="${state.muted ? 'mic-off' : 'mic'}" class="w-6 h-6"></i>`;
             refreshIcons();
-        });
+        };
 
-        buttons.leave.addEventListener('click', () => location.reload());
+        document.getElementById('btn-copy').onclick = () => {
+            const url = `${window.location.origin}${window.location.pathname}?room=${state.room}`;
+            navigator.clipboard.writeText(url);
+            alert("Invite link copied to clipboard!");
+        };
 
-        buttons.copyLink.addEventListener('click', () => {
-            let base = window.location.href.split('?')[0].split('#')[0];
-            // Fix for blob URLs in restricted environments
-            if(base.startsWith('blob:')) {
-                base = "YourAppURL"; // Fallback placeholder
-            }
-            const url = `${base}?room=${state.roomName}`;
-            navigator.clipboard.writeText(url).then(() => showToast("Invite link copied"));
-        });
-
+        document.getElementById('btn-leave').onclick = () => location.href = window.location.pathname;
     </script>
 </body>
 </html>
