@@ -23,22 +23,23 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        /* Crucial Fix: Jitsi is placed inside the avatar circle. 
-           It MUST be somewhat visible and on-screen for mobile browsers 
-           to allow Microphone access and prevent throttling.
+        /* Crucial Fix: The iframe must be technically 'interactable' for the browser 
+           to allow audio to play (Autoplay Policy). We keep it over the avatar 
+           but allow pointer events so the browser treats clicks in this area 
+           as intent to hear audio.
         */
         #jitsi-viewport {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 140px; /* Same size as avatar */
+            width: 140px; 
             height: 140px;
-            z-index: 10;
-            opacity: 0.01; /* Nearly invisible but 'visible' to browser */
-            pointer-events: none;
+            z-index: 20;
+            opacity: 0.01; 
             border-radius: 50%;
             overflow: hidden;
+            pointer-events: auto; /* MUST BE AUTO TO TRIGGER AUDIO PERMISSION */
         }
 
         .voice-avatar {
@@ -121,12 +122,13 @@
                 <div class="avatar-ring"></div>
                 <div class="avatar-ring" style="animation-delay: 0.5s"></div>
                 <div id="user-avatar" class="voice-avatar text-white">?</div>
-                <!-- Jitsi viewport positioned directly over the avatar but transparent -->
-                <div id="jitsi-viewport"></div>
+                <!-- Jitsi viewport positioned directly over the avatar -->
+                <div id="jitsi-viewport" allow="microphone; camera; autoplay; display-capture"></div>
             </div>
             <div class="text-center">
                 <p id="active-user-display" class="text-xl font-medium text-slate-300"></p>
                 <p class="text-slate-500 text-sm mt-1">Audio Only Mode</p>
+                <p id="audio-hint" class="text-xs text-blue-500 mt-2 opacity-0 transition-opacity">Tap the circle if you can't hear anything</p>
             </div>
         </div>
 
@@ -199,7 +201,7 @@
                     enableWelcomePage: false,
                     disableDeepLinking: true,
                     disableThirdPartyRequests: true,
-                    p2p: { enabled: true } // Faster connection for 1v1
+                    p2p: { enabled: true } 
                 },
                 interfaceConfigOverwrite: {
                     TOOLBAR_BUTTONS: [],
@@ -217,11 +219,13 @@
                     document.getElementById('status-badge').classList.replace('bg-blue-500/10', 'bg-green-500/10');
                     document.getElementById('status-badge').querySelector('span').classList.replace('bg-blue-500', 'bg-green-500');
                     document.getElementById('call-status').classList.replace('text-blue-400', 'text-green-400');
-                    
-                    // Force mute state sync
-                    api.executeCommand('muteEveryone', 'audio');
-                    api.executeCommand('toggleAudio');
-                    api.executeCommand('toggleAudio');
+                    document.getElementById('audio-hint').classList.remove('opacity-0');
+
+                    // Brief delay then ensure audio is unmuted
+                    setTimeout(() => {
+                        api.executeCommand('toggleAudio');
+                        api.executeCommand('toggleAudio');
+                    }, 1000);
                 });
 
                 api.addEventListener('audioMuteStatusChanged', (e) => {
