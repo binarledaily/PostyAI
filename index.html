@@ -23,17 +23,22 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        /* Crucial: We don't use 1px width/height because browsers throttle invisible media.
-           Instead, we keep it visible to the browser but hide it from the user view.
+        /* Crucial Fix: Jitsi is placed inside the avatar circle. 
+           It MUST be somewhat visible and on-screen for mobile browsers 
+           to allow Microphone access and prevent throttling.
         */
         #jitsi-viewport {
-            position: fixed;
-            top: -10000px; /* Off-screen */
-            left: 0;
-            width: 400px;
-            height: 400px;
-            z-index: -1;
-            opacity: 0.1;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 140px; /* Same size as avatar */
+            height: 140px;
+            z-index: 10;
+            opacity: 0.01; /* Nearly invisible but 'visible' to browser */
+            pointer-events: none;
+            border-radius: 50%;
+            overflow: hidden;
         }
 
         .voice-avatar {
@@ -48,6 +53,7 @@
             font-weight: bold;
             box-shadow: 0 0 40px rgba(59, 130, 246, 0.3);
             position: relative;
+            z-index: 5;
         }
 
         .avatar-ring {
@@ -115,6 +121,8 @@
                 <div class="avatar-ring"></div>
                 <div class="avatar-ring" style="animation-delay: 0.5s"></div>
                 <div id="user-avatar" class="voice-avatar text-white">?</div>
+                <!-- Jitsi viewport positioned directly over the avatar but transparent -->
+                <div id="jitsi-viewport"></div>
             </div>
             <div class="text-center">
                 <p id="active-user-display" class="text-xl font-medium text-slate-300"></p>
@@ -124,7 +132,7 @@
 
         <!-- Custom Controls -->
         <div class="flex items-center gap-6">
-            <button id="mute-btn" onclick="toggleMute()" class="w-16 h-16 rounded-full glass flex items-center justify-center hover:bg-slate-800 transition shadow-lg">
+            <button id="mute-btn" onclick="toggleMute()" class="w-16 h-16 rounded-full glass flex items-center justify-center hover:bg-slate-800 transition shadow-lg border border-white/5">
                 <span id="mute-icon" class="text-2xl">🎤</span>
             </button>
             
@@ -132,14 +140,11 @@
                 <span class="text-3xl text-white">📞</span>
             </button>
 
-            <button onclick="copyLink()" class="w-16 h-16 rounded-full glass flex items-center justify-center hover:bg-slate-800 transition shadow-lg">
+            <button onclick="copyLink()" class="w-16 h-16 rounded-full glass flex items-center justify-center hover:bg-slate-800 transition shadow-lg border border-white/5">
                 <span class="text-2xl">➕</span>
             </button>
         </div>
     </div>
-
-    <!-- Hidden Jitsi Processor -->
-    <div id="jitsi-viewport"></div>
 
     <div id="toast" class="fixed top-8 px-6 py-3 bg-blue-600 text-white rounded-full text-sm font-medium opacity-0 transition-opacity z-[100] pointer-events-none">
         Link copied!
@@ -153,7 +158,7 @@
             const urlParams = new URLSearchParams(window.location.search);
             const existingRoom = urlParams.get('room');
             document.getElementById('room-name').value = existingRoom || `nexus-${Math.random().toString(36).substring(2, 10)}`;
-            document.getElementById('username').value = `Explorer-${Math.floor(Math.random()*9000 + 1000)}`;
+            document.getElementById('username').value = `User-${Math.floor(Math.random()*9000 + 1000)}`;
         };
 
         function copyLink() {
@@ -187,24 +192,18 @@
                 parentNode: document.querySelector('#jitsi-viewport'),
                 userInfo: { displayName: displayName },
                 configOverwrite: {
-                    startAudioOnly: true, // Force audio only
+                    startAudioOnly: true, 
                     startWithVideoMuted: true,
                     startWithAudioMuted: false,
                     prejoinPageEnabled: false,
                     enableWelcomePage: false,
                     disableDeepLinking: true,
-                    // Audio processing optimizations
-                    disableAudioLevels: false,
-                    enableNoAudioDetection: true,
-                    enableNoisyMicDetection: true,
-                    // Hide UI clutter
-                    hideConferenceTimer: true,
-                    hideConferenceSubject: true
+                    disableThirdPartyRequests: true,
+                    p2p: { enabled: true } // Faster connection for 1v1
                 },
                 interfaceConfigOverwrite: {
                     TOOLBAR_BUTTONS: [],
                     SETTINGS_SECTIONS: [],
-                    SHOW_CHROME_EXTENSION_BANNER: false,
                     SHOW_JITSI_WATERMARK: false,
                     DISPLAY_WELCOME_PAGE_CONTENT: false
                 }
@@ -218,6 +217,11 @@
                     document.getElementById('status-badge').classList.replace('bg-blue-500/10', 'bg-green-500/10');
                     document.getElementById('status-badge').querySelector('span').classList.replace('bg-blue-500', 'bg-green-500');
                     document.getElementById('call-status').classList.replace('text-blue-400', 'text-green-400');
+                    
+                    // Force mute state sync
+                    api.executeCommand('muteEveryone', 'audio');
+                    api.executeCommand('toggleAudio');
+                    api.executeCommand('toggleAudio');
                 });
 
                 api.addEventListener('audioMuteStatusChanged', (e) => {
@@ -228,9 +232,8 @@
                 api.addEventListener('readyToClose', () => endCall());
                 
             } catch (error) {
-                console.error("Jitsi failed to load", error);
-                showToast("Connection failed. Try again.");
-                setTimeout(() => window.location.reload(), 2000);
+                console.error("Jitsi Error:", error);
+                window.location.reload();
             }
         }
 
@@ -245,11 +248,9 @@
             if (isMuted) {
                 icon.innerText = '🔇';
                 btn.classList.add('bg-red-900/40');
-                btn.classList.add('border-red-500/50');
             } else {
                 icon.innerText = '🎤';
                 btn.classList.remove('bg-red-900/40');
-                btn.classList.remove('border-red-500/50');
             }
         }
 
